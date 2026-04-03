@@ -23,9 +23,9 @@ export default function DiagnosisFlow() {
   } = useDiagnosisStore();
 
   const [loading, setLoading] = useState(false);
-  const [sessionCreated, setSessionCreated] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
-  // 고객사 ID가 있을 때만 고객사 정보 조회
+  // 고객사 정보 (companyId 있을 때만)
   const { data: company } = useQuery({
     queryKey: ['customer', companyId],
     queryFn: () => customerAPI.get(companyId).then(r => r.data),
@@ -41,26 +41,37 @@ export default function DiagnosisFlow() {
     if (modules) setAvailableModules(modules);
   }, [modules]);
 
-  // 익명 진단: companyId 없을 때 즉시 세션 생성
+  // 마운트 시 스토어 초기화 + 세션 생성
   useEffect(() => {
-    if (!companyId && !sessionId && !sessionCreated) {
-      setSessionCreated(true);
-      diagnosisAPI.createSession({})
-        .then(r => initSession(r.data.session_id, null, null))
-        .catch(() => toast.error('세션 생성 실패'));
-    }
-  }, [companyId, sessionId, sessionCreated]);
+    reset();
 
-  // 고객사 선택 진단: company 정보 로드 후 세션 생성
-  useEffect(() => {
-    if (companyId && company && !sessionId) {
-      diagnosisAPI.createSession({ company_id: Number(companyId) })
-        .then(r => initSession(r.data.session_id, companyId, company.company_nm))
+    if (!companyId) {
+      // 익명 진단: 즉시 세션 생성
+      diagnosisAPI.createSession({})
+        .then(r => {
+          initSession(r.data.session_id, null, null);
+          setSessionReady(true);
+        })
         .catch(() => toast.error('세션 생성 실패'));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 1회만 실행
+
+  // 고객사 연결 진단: company 로드 후 세션 생성
+  useEffect(() => {
+    if (companyId && company && !sessionReady) {
+      diagnosisAPI.createSession({ company_id: Number(companyId) })
+        .then(r => {
+          initSession(r.data.session_id, companyId, company.company_nm);
+          setSessionReady(true);
+        })
+        .catch(() => toast.error('세션 생성 실패'));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company]);
 
   const goStep2 = async () => {
+    if (!sessionId) { toast.error('세션이 준비되지 않았습니다. 잠시 후 다시 시도하세요.'); return; }
     if (selectedModules.length === 0) { toast.error('최소 1개 모듈을 선택하세요'); return; }
     setLoading(true);
     try {
@@ -93,11 +104,16 @@ export default function DiagnosisFlow() {
       <div style={{ maxWidth: 720 }}>
         <StepBar step={step} labels={STEP_LABELS} />
 
-        {step === 1 && (
+        {/* 세션 준비 중 */}
+        {!sessionReady && (
+          <div className="loading-spinner" style={{ marginTop: 40 }}>세션 준비 중...</div>
+        )}
+
+        {sessionReady && step === 1 && (
           <StepModuleSelect onNext={goStep2} loading={loading} />
         )}
 
-        {step === 2 && (
+        {sessionReady && step === 2 && (
           <StepDiagnosis
             onNext={goCalculate}
             onBack={() => setStep(1)}
