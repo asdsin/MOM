@@ -14,8 +14,11 @@ let sequelize;
 
 if (dialect === 'sqlite') {
   // SQLite — 외부 DB 불필요, 인메모리 (서버 재시작 시 시드로 초기화)
+  // 명시적 require: Vercel ncc 번들러가 sqlite3 native 모듈을 추적·포함하도록 강제
+  const sqlite3 = require('sqlite3');
   sequelize = new Sequelize({
     dialect: 'sqlite',
+    dialectModule: sqlite3,
     storage: process.env.DB_STORAGE || ':memory:',
     logging: false,
     define: DEFINE,
