@@ -7,24 +7,30 @@ const {
 } = require('../../src/models');
 
 module.exports = async function seed() {
-  if (await MasterModule.count() > 0) {
-    console.log('ℹ️  기준정보 시드 이미 완료 — 스킵');
-    return;
-  }
-  console.log('🌱 기준정보 시드 시작...');
+  const isFirstRun = (await MasterModule.count()) === 0;
+  console.log(isFirstRun ? '🌱 기준정보 시드 시작...' : '🔄 질문 데이터 최신화 중...');
 
   // ── 1. 슈퍼관리자 ─────────────────────────────────────────
-  const exists = await AuthUser.findOne({ where: { email: 'admin' } });
-  if (!exists) {
-    await AuthUser.create({
-      tenant_id: 'wizfactory', email: 'admin',
-      password_hash: await bcrypt.hash('admin1234!', 12),
-      name: '시스템 관리자', user_type: 'internal', role_code: 'super_admin',
-    });
-    console.log('  ✅ 관리자 계정: admin / admin1234!');
+  if (isFirstRun) {
+    const exists = await AuthUser.findOne({ where: { email: 'admin' } });
+    if (!exists) {
+      await AuthUser.create({
+        tenant_id: 'wizfactory', email: 'admin',
+        password_hash: await bcrypt.hash('admin1234!', 12),
+        name: '시스템 관리자', user_type: 'internal', role_code: 'super_admin',
+      });
+      console.log('  ✅ 관리자 계정: admin / admin1234!');
+    }
   }
 
-  // ── 2. 6대 모듈 + 옵션 ────────────────────────────────────
+  // ── 2. 모듈 (최초 1회) ────────────────────────────────────
+  if (!isFirstRun) {
+    // 질문만 최신화 후 종료
+    await upsertQuestions();
+    console.log('🎉 질문 최신화 완료!');
+    return;
+  }
+
   const MODULES = [
     { module_cd:'data',  module_nm:'실적·공정 데이터 수집',  stage_no:1,
       description:'디지털 작업지시·실시간 실적·PLC 연동',
@@ -72,37 +78,9 @@ module.exports = async function seed() {
   const modMap = Object.fromEntries(createdMods.map(m => [m.module_cd, m.id]));
   console.log(`  ✅ 모듈 ${MODULES.length}개 생성`);
 
-  // ── 3. 질문 ───────────────────────────────────────────────
-  const QUESTIONS = [
-    ['Q-infra-01','infra',
-      '현장 작업자에게 태블릿 또는 스마트폰이 지급되어 있고, 공장 내 Wi-Fi 또는 LTE 망이 작업 구역을 커버하고 있나요?',
-      '예) 작업자 1인당 태블릿 1대 이상 지급 + 공장 Wi-Fi 커버리지 90% 이상'],
-    ['Q-data-01','data',
-      '작업지시가 종이 없이 태블릿·화면으로 발행되고, 생산 수량·불량을 현장에서 시스템에 직접 입력하고 있나요?',
-      '예) 작업자가 태블릿에서 작업지시 확인 후 완료 수량·불량을 앱에 바로 입력'],
-    ['Q-pm-01',  'pm',
-      '설비 예방점검(PM) 계획과 점검 결과가 시스템에 기록되고, 고장 발생 이력을 조회할 수 있나요?',
-      '예) 모바일 점검표로 PM 수행 기록 + 고장 접수·조치 이력 시스템 저장'],
-    ['Q-qual-01','qual',
-      '불량이 발생했을 때 작업자가 시스템에 즉시 입력하고, 어느 LOT(생산 배치)에서 발생했는지 추적이 가능한가요?',
-      '예) 불량 발생 즉시 앱에 유형·수량 입력 + LOT 번호별 불량 이력 조회'],
-    ['Q-sop-01', 'sop',
-      '현장 작업자가 작업 시 종이가 아닌 태블릿·모니터 화면에서 표준 작업 절차(SOP)를 확인하며 작업하고 있나요?',
-      '예) 작업 시작 시 화면에 SOP 자동 표시, 개정 시 현장에 즉시 반영'],
-    ['Q-issue-01','issue',
-      '설비 고장·품질 이상·작업 지연 등 문제가 발생했을 때 담당자가 시스템에 즉시 등록하고, 관련자에게 자동 알림이 전달되나요?',
-      '예) 문제 발생 즉시 앱에 사진+내용 등록 → 팀장·담당자에게 자동 알림'],
-    ['Q-erp-01', 'erp',
-      '현재 ERP(SAP·Oracle·영림원·더존 등)를 운영 중이며, 외부 시스템과 API로 데이터를 주고받을 수 있나요?',
-      '※ ERP가 없으면 아니오 선택. API 개방 여부는 사전에 IT 담당자 확인 필수'],
-    ['Q-kpi-01', 'kpi',
-      '생산량·불량률·OEE 등 성과 지표(KPI)가 엑셀 취합 없이 시스템에서 자동으로 집계되어 대시보드로 조회되나요?',
-      '예) 실시간 대시보드에서 KPI 확인 가능, 일·주·월 리포트 자동 생성'],
-  ];
-  await MasterQuestion.bulkCreate(QUESTIONS.map(([qcd,mcd,qtxt,hint]) => ({
-    question_cd: qcd, module_id: modMap[mcd], question_txt: qtxt, hint_txt: hint,
-  })));
-  console.log(`  ✅ 질문 ${QUESTIONS.length}개 생성`);
+  // ── 3. 질문 (upsert — 항상 최신 유지) ──────────────────────
+  await upsertQuestions(modMap);
+  console.log('  ✅ 질문 8개 생성/갱신');
 
   // ── 4. 성숙도 단계 ────────────────────────────────────────
   await MasterMaturityStage.bulkCreate([
@@ -168,3 +146,50 @@ module.exports = async function seed() {
   console.log('  ✅ 업종 템플릿 3개 생성');
   console.log('🎉 기준정보 시드 완료!');
 };
+
+// ── 질문 upsert (최초/재기동 모두 항상 최신 유지) ──────────
+async function upsertQuestions(modMapArg) {
+  // modMapArg 없으면 DB에서 직접 조회
+  let modMap = modMapArg;
+  if (!modMap) {
+    const mods = await MasterModule.findAll();
+    modMap = Object.fromEntries(mods.map(m => [m.module_cd, m.id]));
+  }
+
+  const QUESTIONS = [
+    { qcd:'Q-infra-01', mcd:'infra',
+      qtxt:'현장 작업자에게 태블릿 또는 스마트폰이 지급되어 있고, 공장 내 Wi-Fi 또는 LTE 망이 작업 구역을 커버하고 있나요?',
+      hint:'예) 작업자 1인당 태블릿 1대 이상 지급 + 공장 Wi-Fi 커버리지 90% 이상' },
+    { qcd:'Q-data-01', mcd:'data',
+      qtxt:'작업지시가 종이 없이 태블릿·화면으로 발행되고, 생산 수량·불량을 현장에서 시스템에 직접 입력하고 있나요?',
+      hint:'예) 작업자가 태블릿에서 작업지시 확인 후 완료 수량·불량을 앱에 바로 입력' },
+    { qcd:'Q-pm-01', mcd:'pm',
+      qtxt:'설비 예방점검(PM) 계획과 점검 결과가 시스템에 기록되고, 고장 발생 이력을 조회할 수 있나요?',
+      hint:'예) 모바일 점검표로 PM 수행 기록 + 고장 접수·조치 이력 시스템 저장' },
+    { qcd:'Q-qual-01', mcd:'qual',
+      qtxt:'불량이 발생했을 때 작업자가 시스템에 즉시 입력하고, 어느 LOT(생산 배치)에서 발생했는지 추적이 가능한가요?',
+      hint:'예) 불량 발생 즉시 앱에 유형·수량 입력 + LOT 번호별 불량 이력 조회' },
+    { qcd:'Q-sop-01', mcd:'sop',
+      qtxt:'현장 작업자가 작업 시 종이가 아닌 태블릿·모니터 화면에서 표준 작업 절차(SOP)를 확인하며 작업하고 있나요?',
+      hint:'예) 작업 시작 시 화면에 SOP 자동 표시, 개정 시 현장에 즉시 반영' },
+    { qcd:'Q-issue-01', mcd:'issue',
+      qtxt:'설비 고장·품질 이상·작업 지연 등 문제가 발생했을 때 담당자가 시스템에 즉시 등록하고, 관련자에게 자동 알림이 전달되나요?',
+      hint:'예) 문제 발생 즉시 앱에 사진+내용 등록 → 팀장·담당자에게 자동 알림' },
+    { qcd:'Q-erp-01', mcd:'erp',
+      qtxt:'현재 ERP(SAP·Oracle·영림원·더존 등)를 운영 중이며, 외부 시스템과 API로 데이터를 주고받을 수 있나요?',
+      hint:'※ ERP가 없으면 아니오 선택. API 개방 여부는 사전에 IT 담당자 확인 필수' },
+    { qcd:'Q-kpi-01', mcd:'kpi',
+      qtxt:'생산량·불량률·OEE 등 성과 지표(KPI)가 엑셀 취합 없이 시스템에서 자동으로 집계되어 대시보드로 조회되나요?',
+      hint:'예) 실시간 대시보드에서 KPI 확인 가능, 일·주·월 리포트 자동 생성' },
+  ];
+
+  for (const q of QUESTIONS) {
+    if (!modMap[q.mcd]) continue;
+    await MasterQuestion.upsert({
+      question_cd:  q.qcd,
+      module_id:    modMap[q.mcd],
+      question_txt: q.qtxt,
+      hint_txt:     q.hint,
+    });
+  }
+}
