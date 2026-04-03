@@ -10,69 +10,44 @@
 | 백엔드 | Node.js + Express |
 | DB | MySQL 8.0 (로컬/운영) / SQLite 인메모리 (무료 데모) |
 | 인증 | JWT + bcrypt |
-| 컨테이너 | Docker + Docker Compose |
+| 배포 | Vercel (무료) / Docker + Docker Compose (로컬) |
 
 ---
 
-## 🌐 Render.com 무료 배포 (3단계)
+## 🌐 Vercel 무료 배포 (2단계)
 
-> 신용카드 불필요 · 완전 무료 · SQLite 내장으로 외부 DB 없이 동작
+> GitHub 연동 · 완전 무료 · 프로젝트 수 제한 없음 · 슬립 없음 · 신용카드 불필요
 
-### 1단계 — Render 계정 생성
+### 1단계 — Vercel 가입 및 레포 연결
 
-[render.com](https://render.com) → **GitHub으로 가입**
+1. [vercel.com](https://vercel.com) → **Sign Up** → **Continue with GitHub**
+2. 대시보드 → **Add New Project**
+3. `asdsin/MOM` 레포지토리 선택 → **Import**
 
-### 2단계 — 새 Web Service 생성
+### 2단계 — 환경변수 입력 후 배포
 
-1. 대시보드 → **+ New** → **Web Service**
-2. **Connect a repository** → `asdsin/MOM` 선택 (없으면 Configure GitHub App으로 권한 부여)
-3. 아래 설정 입력:
-
-| 항목 | 값 |
-|---|---|
-| **Name** | `mom-system` (자유) |
-| **Region** | Singapore (한국과 가장 가까움) |
-| **Branch** | `main` |
-| **Runtime** | **Docker** |
-| **Dockerfile Path** | `./Dockerfile.prod` |
-| **Instance Type** | **Free** |
-
-4. **Environment Variables** 섹션에 아래 추가:
+**Configure Project** 화면에서 **Environment Variables** 섹션에 아래 입력:
 
 | Key | Value |
 |---|---|
-| `NODE_ENV` | `production` |
-| `PORT` | `3001` |
-| `DB_DIALECT` | `sqlite` |
-| `DB_STORAGE` | `:memory:` |
-| `JWT_SECRET` | `mom-secret-change-this-2024` (아무 문자열) |
+| `JWT_SECRET` | `mom-secret-change-this-2024` |
 | `JWT_EXPIRES_IN` | `8h` |
 
-5. **Create Web Service** 클릭
+> `DB_DIALECT`, `DB_STORAGE`, `NODE_ENV` 는 `api/index.js` 에서 자동 설정됩니다.
 
-### 3단계 — 배포 완료 후 URL 확인
+입력 후 **Deploy** 클릭 → 약 3~5분 빌드 후 URL 자동 생성
 
-- 빌드 로그가 끝나면 상단에 `https://mom-system-xxxx.onrender.com` 형태의 URL 자동 생성
-- 해당 URL로 접속하여 로그인
+### 배포 후 접속
 
-### 초기 계정
+- URL 형식: `https://mom-xxxx.vercel.app`
+- **초기 계정:** `admin@wizfactory.com` / `admin1234!`
 
-```
-이메일: admin@wizfactory.com
-비밀번호: admin1234!
-```
-
-> **참고:** Render 무료 플랜은 15분 미사용 시 슬립 상태가 됩니다.
-> 처음 접속 시 약 30~60초 로딩 시간이 있을 수 있습니다.
-> 슬립에서 깨어나면 SQLite 인메모리 DB가 초기화되므로 시드 데이터(초기 계정·모듈)가 자동 복원됩니다.
+> Vercel 서버리스 함수는 콜드 스타트 시 DB를 초기화합니다 (약 5~10초).
+> 이후 요청은 빠르게 응답합니다.
 
 ---
 
 ## 빠른 시작 (로컬 Docker)
-
-### 사전 요구사항
-- Docker Desktop 설치
-- Docker Compose v2 이상
 
 ```bash
 git clone https://github.com/asdsin/MOM.git
@@ -91,32 +66,14 @@ docker-compose up -d
 
 ## 로컬 개발 (Docker 없이)
 
-### 백엔드
-
 ```bash
-cd backend
-npm install
-
-# .env 작성 (DB 정보 입력)
-cp .env.example .env
-
-# MySQL에서 DB 생성
-mysql -u root -p -e "
-  CREATE DATABASE mom_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-  CREATE USER 'mom_user'@'localhost' IDENTIFIED BY 'mom1234';
-  GRANT ALL PRIVILEGES ON mom_system.* TO 'mom_user'@'localhost';
-  FLUSH PRIVILEGES;
-"
-
+# 백엔드
+cd backend && npm install
+cp .env.example .env   # DB 정보 수정
 npm run dev
-```
 
-### 프론트엔드
-
-```bash
-cd frontend
-npm install
-npm run dev
+# 프론트엔드 (새 터미널)
+cd frontend && npm install && npm run dev
 ```
 
 ---
@@ -125,29 +82,22 @@ npm run dev
 
 ```
 MOM/
-├─ Dockerfile.prod          # 프로덕션 멀티스테이지 빌드
-├─ docker-compose.yml       # 로컬 개발용
-├─ railway.json             # Railway 배포 설정
-├─ render.yaml              # Render 무료 배포 설정
+├─ api/index.js         # Vercel 서버리스 진입점
+├─ vercel.json          # Vercel 배포 설정
+├─ Dockerfile.prod      # Docker 프로덕션 빌드
+├─ docker-compose.yml   # 로컬 개발
+├─ render.yaml          # Render 배포 대안
 ├─ backend/
-│  ├─ src/
-│  │  ├─ config/db.js       # MySQL / SQLite 자동 전환
-│  │  ├─ models/index.js    # Sequelize 모델 (23개 테이블)
-│  │  ├─ routes/
-│  │  │  ├─ auth.routes.js
-│  │  │  ├─ customer.routes.js
-│  │  │  ├─ master.routes.js    # 기준정보 + 룰빌더 API
-│  │  │  └─ diagnosis.routes.js # 진단 + Excel 보고서 API
-│  │  └─ services/DiagnosisEngine.js
-│  └─ db/seeders/master.seed.js
+│  ├─ src/config/db.js  # MySQL / SQLite 자동 전환
+│  ├─ src/models/       # Sequelize 모델 (23개 테이블)
+│  ├─ src/routes/       # auth / customers / master / diagnosis
+│  └─ db/seeders/       # 초기 데이터 자동 시드
 └─ frontend/src/
-   ├─ api/
-   ├─ store/
    └─ pages/
       ├─ Dashboard.jsx
       ├─ Customers/
-      ├─ Diagnosis/      # DiagnosisFlow + DiagnosisResult (Excel 출력)
-      └─ Master/         # MasterPage (룰빌더 + 템플릿 CRUD)
+      ├─ Diagnosis/     # 진단 플로우 + Excel 보고서 출력
+      └─ Master/        # 룰빌더 + 템플릿 CRUD
 ```
 
 ---
@@ -165,13 +115,11 @@ MOM/
 
 ## 초기 데이터 (자동 시드)
 
-서버 최초 실행 시 자동으로 아래 데이터가 생성됩니다.
+서버 최초 실행 시 자동 생성:
 
-- **모듈 8개**: 실적·공정 수집 / 설비·보전 / 품질 관리 / SOP 관리 / 이슈 관리 / 실적 집계 / ERP 연동 / 현장 인프라
-- **모듈 의존성 7개**
-- **판정 룰 4개**: Stage 1~3 자동 판정
-- **업종 템플릿 3개**: 전자조립 / 가공혼합 / 사출프레스
-- **수집 자료 체크리스트 9개**
+- 모듈 8개 / 모듈 의존성 7개 / 판정 룰 4개
+- 업종 템플릿 3개 (전자조립 / 가공혼합 / 사출프레스)
+- 수집 자료 체크리스트 9개
 
 ---
 
