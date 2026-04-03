@@ -16,10 +16,8 @@ const S = {
            borderRadius:12, fontSize:15, fontFamily:'inherit', outline:'none',
            background:'#fdf8f7', marginBottom:16,
            boxShadow:'inset -1px -1px 3px rgba(255,220,210,.7), inset 1px 1px 3px rgba(146,43,33,.12)' },
-  btn:   { width:'100%', padding:'14px', background:'linear-gradient(135deg, #C0392B, #922B21)',
-           color:'#fff', border:'none', borderRadius:14, fontSize:15, fontWeight:700,
-           cursor:'pointer', fontFamily:'inherit', marginTop:8,
-           boxShadow:'0 4px 16px rgba(192,57,43,.28)', transition:'transform .2s' },
+  btn:   { width:'100%', padding:'14px', border:'none', borderRadius:14, fontSize:15, fontWeight:700,
+           fontFamily:'inherit', marginTop:8, transition:'background .2s' },
   err:   { fontSize:12, color:'#C0392B', marginBottom:12, padding:'10px 14px',
            background:'rgba(192,57,43,.06)', borderRadius:10 },
 };
@@ -31,6 +29,16 @@ export default function Login() {
   const [error, setError]     = useState('');
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
+
+  const canSubmit = email.trim() !== '' && password.trim() !== '' && !loading;
+
+  const btnStyle = {
+    ...S.btn,
+    background: canSubmit ? 'linear-gradient(135deg, #C0392B, #922B21)' : '#ccc',
+    color: '#fff',
+    cursor: canSubmit ? 'pointer' : 'not-allowed',
+    boxShadow: canSubmit ? '0 4px 16px rgba(192,57,43,.28)' : 'none',
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,14 +68,16 @@ export default function Login() {
           <label style={S.label}>아이디</label>
           <input style={S.input} type="text" value={email}
                  onChange={e => setEmail(e.target.value)}
-                 placeholder="아이디를 입력하세요" autoFocus />
+                 placeholder="아이디를 입력하세요"
+                 autoComplete="off" autoFocus />
 
           <label style={S.label}>비밀번호</label>
           <input style={S.input} type="password" value={password}
                  onChange={e => setPassword(e.target.value)}
-                 placeholder="••••••••" />
+                 placeholder="••••••••"
+                 autoComplete="new-password" />
 
-          <button style={S.btn} type="submit" disabled={loading}>
+          <button style={btnStyle} type="submit" disabled={!canSubmit}>
             {loading ? '로그인 중...' : '로그인'}
           </button>
         </form>
