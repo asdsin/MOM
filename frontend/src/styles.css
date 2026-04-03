@@ -1,0 +1,106 @@
+/* ── CSS 변수 ──────────────────────────────────────────────── */
+:root {
+  --red:      #C0392B;
+  --red-d:    #922B21;
+  --red-bg:   #FEF9F8;
+  --red-faint:#FEF0EE;
+  --text:     #1a0a0a;
+  --t2:       rgba(26,10,10,.68);
+  --t3:       rgba(26,10,10,.42);
+  --green:    #1a7a4a;
+  --blue:     #1a5fa8;
+  --amber:    #b7600a;
+  --white:    #ffffff;
+  --gray:     #F5F5F5;
+
+  --sh: -3px -3px 8px rgba(255,180,170,.55),
+         3px  3px 10px rgba(146,43,33,.20),
+        inset 1px 1px 3px rgba(255,220,210,.80),
+        inset -1px -1px 3px rgba(192,57,43,.10);
+  --sh-s: -2px -2px 5px rgba(255,180,170,.50),
+           2px  2px 6px rgba(146,43,33,.18),
+          inset 1px 1px 2px rgba(255,220,210,.70),
+          inset -1px -1px 2px rgba(192,57,43,.08);
+  --sh-in: inset -2px -2px 5px rgba(255,220,210,.80),
+           inset  2px  2px 6px rgba(146,43,33,.18);
+
+  --r:    20px;
+  --r-sm: 14px;
+  --r-xs: 10px;
+}
+
+/* ── 공통 카드 ──────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border-radius: var(--r);
+  padding: 28px 24px;
+  box-shadow: var(--sh);
+}
+.card-sm {
+  background: #fff;
+  border-radius: var(--r-sm);
+  padding: 16px 18px;
+  box-shadow: var(--sh-s);
+}
+
+/* ── 버튼 ───────────────────────────────────────────────────── */
+.btn-primary {
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 980px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s, transform .2s;
+  font-family: inherit;
+}
+.btn-primary:hover   { opacity: .88; transform: scale(1.02); }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+.btn-ghost {
+  background: #fff;
+  color: var(--text);
+  border: 1.5px solid rgba(192,57,43,.28);
+  border-radius: 980px;
+  padding: 11px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+  font-family: inherit;
+}
+.btn-ghost:hover { background: var(--red-faint); }
+
+/* ── 배지 ───────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge-red    { background: rgba(192,57,43,.10); color: var(--red); }
+.badge-green  { background: rgba(26,122,74,.10);  color: var(--green); }
+.badge-blue   { background: rgba(26,95,168,.10);  color: var(--blue); }
+.badge-amber  { background: rgba(183,96,10,.10);  color: var(--amber); }
+
+/* ── 레이아웃 ───────────────────────────────────────────────── */
+.page-wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 80px; }
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 14px;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 8px;
+}
