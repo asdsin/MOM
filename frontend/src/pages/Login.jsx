@@ -57,10 +57,10 @@ export default function Login() {
         {error && <div style={S.err}>{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <label style={S.label}>이메일</label>
-          <input style={S.input} type="email" value={email}
+          <label style={S.label}>아이디</label>
+          <input style={S.input} type="text" value={email}
                  onChange={e => setEmail(e.target.value)}
-                 placeholder="admin@wizfactory.com" autoFocus />
+                 placeholder="아이디를 입력하세요" autoFocus />
 
           <label style={S.label}>비밀번호</label>
           <input style={S.input} type="password" value={password}

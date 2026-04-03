@@ -40,7 +40,7 @@
 ### 배포 후 접속
 
 - URL 형식: `https://mom-xxxx.vercel.app`
-- **초기 계정:** `admin@wizfactory.com` / `admin1234!`
+- **초기 계정:** ID `admin` / PW `admin1234!`
 
 > Vercel 서버리스 함수는 콜드 스타트 시 DB를 초기화합니다 (약 5~10초).
 > 이후 요청은 빠르게 응답합니다.

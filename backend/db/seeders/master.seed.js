@@ -14,14 +14,14 @@ module.exports = async function seed() {
   console.log('🌱 기준정보 시드 시작...');
 
   // ── 1. 슈퍼관리자 ─────────────────────────────────────────
-  const exists = await AuthUser.findOne({ where: { email: 'admin@wizfactory.com' } });
+  const exists = await AuthUser.findOne({ where: { email: 'admin' } });
   if (!exists) {
     await AuthUser.create({
-      tenant_id: 'wizfactory', email: 'admin@wizfactory.com',
+      tenant_id: 'wizfactory', email: 'admin',
       password_hash: await bcrypt.hash('admin1234!', 12),
       name: '시스템 관리자', user_type: 'internal', role_code: 'super_admin',
     });
-    console.log('  ✅ 관리자 계정: admin@wizfactory.com / admin1234!');
+    console.log('  ✅ 관리자 계정: admin / admin1234!');
   }
 
   // ── 2. 6대 모듈 + 옵션 ────────────────────────────────────
