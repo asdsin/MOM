@@ -23,10 +23,13 @@ export default function DiagnosisFlow() {
   } = useDiagnosisStore();
 
   const [loading, setLoading] = useState(false);
+  const [sessionCreated, setSessionCreated] = useState(false);
 
+  // 고객사 ID가 있을 때만 고객사 정보 조회
   const { data: company } = useQuery({
     queryKey: ['customer', companyId],
     queryFn: () => customerAPI.get(companyId).then(r => r.data),
+    enabled: !!companyId,
   });
 
   const { data: modules } = useQuery({
@@ -38,6 +41,17 @@ export default function DiagnosisFlow() {
     if (modules) setAvailableModules(modules);
   }, [modules]);
 
+  // 익명 진단: companyId 없을 때 즉시 세션 생성
+  useEffect(() => {
+    if (!companyId && !sessionId && !sessionCreated) {
+      setSessionCreated(true);
+      diagnosisAPI.createSession({})
+        .then(r => initSession(r.data.session_id, null, null))
+        .catch(() => toast.error('세션 생성 실패'));
+    }
+  }, [companyId, sessionId, sessionCreated]);
+
+  // 고객사 선택 진단: company 정보 로드 후 세션 생성
   useEffect(() => {
     if (companyId && company && !sessionId) {
       diagnosisAPI.createSession({ company_id: Number(companyId) })
@@ -72,8 +86,10 @@ export default function DiagnosisFlow() {
     } finally { setLoading(false); }
   };
 
+  const titleSuffix = company?.company_nm ? ` — ${company.company_nm}` : '';
+
   return (
-    <Layout title={`MOM 수준 진단 — ${company?.company_nm || ''}`}>
+    <Layout title={`MOM 수준 진단${titleSuffix}`}>
       <div style={{ maxWidth: 720 }}>
         <StepBar step={step} labels={STEP_LABELS} />
 

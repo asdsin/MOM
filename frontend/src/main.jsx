@@ -59,6 +59,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/customers" element={<PrivateRoute><CustomerList /></PrivateRoute>} />
           <Route path="/customers/new" element={<PrivateRoute><CustomerForm /></PrivateRoute>} />
           <Route path="/customers/:id" element={<PrivateRoute><CustomerDetail /></PrivateRoute>} />
+          <Route path="/diagnosis/new" element={<PrivateRoute><DiagnosisFlow /></PrivateRoute>} />
           <Route path="/diagnosis/:companyId" element={<PrivateRoute><DiagnosisFlow /></PrivateRoute>} />
           <Route path="/diagnosis/result/:sessionId" element={<PrivateRoute><DiagnosisResult /></PrivateRoute>} />
           <Route path="/master" element={<PrivateRoute><MasterPage /></PrivateRoute>} />

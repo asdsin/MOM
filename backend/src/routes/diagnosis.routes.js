@@ -39,18 +39,28 @@ router.get('/modules/available', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ── 진단 세션 생성 ──────────────────────────────────────────
-router.post('/sessions', ...requireInternal, validate([
-  body('company_id').isInt().withMessage('고객사 ID 필수'),
-]), async (req, res, next) => {
+// ── 진단 세션 생성 (company_id 없이 익명 진단 가능) ─────────
+router.post('/sessions', ...requireInternal, async (req, res, next) => {
   try {
     const { company_id, template_cd, selected_modules = [] } = req.body;
-    if (!company_id) return res.status(400).json({ error: 'company_id 필수' });
     const session = await DiagnosisSession.create({
-      company_id, user_id: req.user.id,
+      company_id: company_id || null,
+      user_id: req.user.id,
       template_cd, selected_modules, rule_version: 1,
     });
     res.status(201).json({ session_id: session.id, status: session.status });
+  } catch (e) { next(e); }
+});
+
+// ── 진단 완료 후 회사명 저장 ─────────────────────────────────
+router.patch('/sessions/:id/company', ...requireInternal, async (req, res, next) => {
+  try {
+    const { company_nm } = req.body;
+    if (!company_nm?.trim()) return res.status(400).json({ error: '회사명을 입력해주세요' });
+    const session = await DiagnosisSession.findByPk(req.params.id);
+    if (!session) return res.status(404).json({ error: '세션 없음' });
+    await session.update({ company_nm: company_nm.trim() });
+    res.json({ message: '회사명 저장 완료', company_nm: session.company_nm });
   } catch (e) { next(e); }
 });
 
@@ -126,6 +136,8 @@ router.post('/sessions/:id/calculate', ...requireInternal, async (req, res, next
 
     res.json({
       result_id:       result.id,
+      session_id:      session.id,
+      company_id:      session.company_id || null,
       stage_no:        stageNo,
       stage_meta:      stageMeta,
       total_weeks_min: result.total_weeks_min,
@@ -222,7 +234,7 @@ router.get('/sessions/:id/export-excel', ...requireAny, async (req, res, next) =
 
     // 기본 정보
     const infoRows = [
-      ['고객사', session.company?.company_nm || '-'],
+      ['고객사', session.company?.company_nm || session.company_nm || '-'],
       ['진단 일시', new Date(session.created_at).toLocaleDateString('ko-KR')],
       ['판정 단계', sm.badge],
       ['총 소요 기간', `${result.total_weeks_min} ~ ${result.total_weeks_max} 주`],
@@ -331,7 +343,7 @@ router.get('/sessions/:id/export-excel', ...requireAny, async (req, res, next) =
     });
 
     // 응답 전송
-    const companyNm = session.company?.company_nm || 'unknown';
+    const companyNm = session.company?.company_nm || session.company_nm || '미등록';
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = encodeURIComponent(`MOM_진단결과_${companyNm}_${dateStr}.xlsx`);
 

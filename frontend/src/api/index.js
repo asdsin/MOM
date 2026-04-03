@@ -65,4 +65,5 @@ export const diagnosisAPI = {
   getResult:           (id)           => api.get(`/api/diagnosis/sessions/${id}/result`),
   getSessions:         (params)       => api.get('/api/diagnosis/sessions', { params }),
   exportExcel:         (id)           => api.get(`/api/diagnosis/sessions/${id}/export-excel`, { responseType: 'blob' }),
+  saveCompanyName:     (id, company_nm) => api.patch(`/api/diagnosis/sessions/${id}/company`, { company_nm }),
 };

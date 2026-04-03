@@ -92,12 +92,12 @@ export default function Dashboard() {
             MOM 수준 진단
           </div>
           <div className="text-sm" style={{ color: 'var(--t2)', lineHeight: 1.6, marginBottom: 20 }}>
-            고객사를 선택하고 모듈별 현황을 답변하면<br/>
-            도입 단계 · 우선순위 · 공수를 자동으로 산정합니다.
+            모듈별 현황을 답변하면 도입 단계 · 우선순위 · 공수를<br/>
+            자동으로 산정합니다. 고객사 등록 없이 바로 시작할 수 있습니다.
           </div>
-          <button onClick={() => navigate('/customers')} className="btn-primary"
+          <button onClick={() => navigate('/diagnosis/new')} className="btn-primary"
                   style={{ alignSelf: 'flex-start' }}>
-            고객사 선택하기 →
+            진단 바로 시작 →
           </button>
         </div>
       </div>

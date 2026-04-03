@@ -183,7 +183,8 @@ const MasterTemplateIndustry = sequelize.define('master_template_industry', {
 // ══════════════════════════════════════════════════════════
 const DiagnosisSession = sequelize.define('diagnosis_session', {
   id:               { type: DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true },
-  company_id:       { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
+  company_id:       { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+  company_nm:       { type: DataTypes.STRING(200), allowNull: true },
   user_id:          { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
   template_cd:      { type: DataTypes.STRING(30) },
   selected_modules: { type: DataTypes.JSON },

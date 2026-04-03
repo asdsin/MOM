@@ -5,14 +5,18 @@ import toast from 'react-hot-toast';
 import Layout from '../../components/Layout';
 import { diagnosisAPI } from '../../api';
 import { useDiagnosisStore } from '../../store';
+import { getErrorMessage } from '../../utils/getErrorMessage';
 import { EFFORT_TYPE_LABEL, EFFORT_TYPE_COLOR, DIAGNOSIS_RESULT_TABS } from '../../constants';
 
 export default function DiagnosisResult() {
   const { sessionId } = useParams();
   const { state }     = useLocation();
   const navigate      = useNavigate();
-  const { reset }     = useDiagnosisStore();
+  const { reset } = useDiagnosisStore();
   const [curTab, setCurTab] = useState(0);
+  const [companyNm, setCompanyNm] = useState('');
+  const [nameSaved, setNameSaved] = useState(false);
+  const [nameSaving, setNameSaving] = useState(false);
 
   const { data: apiResult } = useQuery({
     queryKey: ['result', sessionId],
@@ -52,6 +56,18 @@ export default function DiagnosisResult() {
     } finally {
       setExporting(false);
     }
+  };
+
+  const handleSaveCompanyName = async () => {
+    if (!companyNm.trim()) { toast.error('회사명을 입력해주세요'); return; }
+    setNameSaving(true);
+    try {
+      await diagnosisAPI.saveCompanyName(sessionId, companyNm.trim());
+      setNameSaved(true);
+      toast.success('회사명이 저장되었습니다');
+    } catch (err) {
+      toast.error(getErrorMessage(err, '저장 실패'));
+    } finally { setNameSaving(false); }
   };
 
   // 추진 일정 자동 생성
@@ -209,6 +225,45 @@ export default function DiagnosisResult() {
           )}
         </div>
 
+        {/* 회사명 저장 (고객사 미등록 진단일 때) */}
+        {!result.company_id && (
+          <div className="card-outer" style={{ marginBottom: 16 }}>
+            {nameSaved ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
+                <span style={{ fontSize: 18 }}>✅</span>
+                <span className="text-sm" style={{ color: 'var(--t2)' }}>
+                  <strong style={{ color: 'var(--text)' }}>{companyNm}</strong> 저장 완료
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="text-sm font-bold" style={{ marginBottom: 8 }}>
+                  고객사 이름 저장 (선택)
+                </div>
+                <div className="text-xs" style={{ color: 'var(--t3)', marginBottom: 12 }}>
+                  나중에 조회할 수 있도록 회사명만 저장합니다. 나머지 정보는 입력하지 않아도 됩니다.
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    className="form-input flex-1"
+                    value={companyNm}
+                    onChange={e => setCompanyNm(e.target.value)}
+                    placeholder="회사명 입력 (예: (주)한국제조)"
+                    onKeyDown={e => e.key === 'Enter' && handleSaveCompanyName()}
+                  />
+                  <button
+                    onClick={handleSaveCompanyName}
+                    disabled={nameSaving || !companyNm.trim()}
+                    className="btn-primary"
+                    style={{ flexShrink: 0 }}>
+                    {nameSaving ? '저장 중...' : '저장'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* 버튼 */}
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={handleExport} disabled={exporting}
@@ -216,7 +271,7 @@ export default function DiagnosisResult() {
                   style={{ opacity: exporting ? .6 : 1 }}>
             {exporting ? '다운로드 중...' : '📊 Excel 보고서 다운로드'}
           </button>
-          <button onClick={() => { reset(); navigate('/customers'); }}
+          <button onClick={() => { reset(); navigate('/'); }}
                   className="btn-secondary flex-1">
             ↺ 다시 진단하기
           </button>
