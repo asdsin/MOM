@@ -9,8 +9,14 @@ const PORT = process.env.PORT || 3001;
 (async () => {
   await testConnection();
 
-  // 테이블 동기화 (개발: alter, 운영: migrate 사용)
-  await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
+  // 테이블 동기화
+  // SQLite(인메모리): force=true 로 매번 새로 생성 후 시드
+  // MySQL 개발: alter=true / MySQL 운영: 변경 없음
+  const dialect = process.env.DB_DIALECT || 'mysql';
+  const syncOpt = dialect === 'sqlite'
+    ? { force: true }
+    : { alter: process.env.NODE_ENV === 'development' };
+  await sequelize.sync(syncOpt);
   console.log('✅ DB 동기화 완료');
 
   // 초기 데이터 시드

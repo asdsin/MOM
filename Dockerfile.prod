@@ -22,7 +22,10 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY backend/package*.json ./
-RUN npm ci --only=production
+# sqlite3 네이티브 모듈 컴파일을 위한 빌드 도구
+RUN apk add --no-cache python3 make g++ && \
+    npm ci --only=production && \
+    apk del python3 make g++
 
 COPY backend/ .
 

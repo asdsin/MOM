@@ -8,59 +8,52 @@
 |---|---|
 | 프론트엔드 | React 18 + Vite + Zustand + TanStack Query |
 | 백엔드 | Node.js + Express |
-| DB | MySQL 8.0 + Sequelize ORM |
+| DB | MySQL 8.0 (로컬/운영) / SQLite 인메모리 (무료 데모) |
 | 인증 | JWT + bcrypt |
 | 컨테이너 | Docker + Docker Compose |
 
 ---
 
-## 🌐 Railway 클라우드 배포 (추천)
+## 🌐 Render.com 무료 배포 (3단계)
 
-Railway는 MySQL + Node.js를 무료로 지원하는 클라우드 플랫폼입니다.
-**단 5분** 안에 퍼블릭 URL을 생성할 수 있습니다.
+> 신용카드 불필요 · 완전 무료 · SQLite 내장으로 외부 DB 없이 동작
 
-### 1단계 — Railway 계정 생성
-[railway.app](https://railway.app) → GitHub 계정으로 가입
+### 1단계 — Render 계정 생성
 
-### 2단계 — 새 프로젝트 생성
+[render.com](https://render.com) → **GitHub으로 가입**
 
-```
-New Project → Deploy from GitHub repo → asdsin/MOM 선택
-```
+### 2단계 — 새 Web Service 생성
 
-### 3단계 — MySQL 데이터베이스 추가
+1. 대시보드 → **+ New** → **Web Service**
+2. **Connect a repository** → `asdsin/MOM` 선택 (없으면 Configure GitHub App으로 권한 부여)
+3. 아래 설정 입력:
 
-```
-프로젝트 대시보드 → + New → Database → MySQL
-```
-
-MySQL 서비스가 추가되면 **Connect** 탭에서 아래 값을 복사합니다:
-- `MYSQL_HOST`
-- `MYSQL_PORT`
-- `MYSQL_DATABASE`
-- `MYSQL_USER`
-- `MYSQL_PASSWORD`
-
-### 4단계 — 서비스 환경변수 설정
-
-MOM 서비스 클릭 → **Variables** 탭 → 아래 변수 입력:
-
-| 변수명 | 값 |
+| 항목 | 값 |
 |---|---|
-| `DB_HOST` | MySQL의 MYSQL_HOST 값 |
-| `DB_PORT` | MySQL의 MYSQL_PORT 값 |
-| `DB_NAME` | MySQL의 MYSQL_DATABASE 값 |
-| `DB_USER` | MySQL의 MYSQL_USER 값 |
-| `DB_PASS` | MySQL의 MYSQL_PASSWORD 값 |
-| `JWT_SECRET` | 임의의 긴 문자열 (예: `mom-secret-xyz-2024`) |
-| `JWT_EXPIRES_IN` | `8h` |
+| **Name** | `mom-system` (자유) |
+| **Region** | Singapore (한국과 가장 가까움) |
+| **Branch** | `main` |
+| **Runtime** | **Docker** |
+| **Dockerfile Path** | `./Dockerfile.prod` |
+| **Instance Type** | **Free** |
+
+4. **Environment Variables** 섹션에 아래 추가:
+
+| Key | Value |
+|---|---|
 | `NODE_ENV` | `production` |
 | `PORT` | `3001` |
+| `DB_DIALECT` | `sqlite` |
+| `DB_STORAGE` | `:memory:` |
+| `JWT_SECRET` | `mom-secret-change-this-2024` (아무 문자열) |
+| `JWT_EXPIRES_IN` | `8h` |
 
-### 5단계 — 배포 확인
+5. **Create Web Service** 클릭
 
-Variables 저장 시 자동으로 재배포됩니다.
-**Settings → Domains** 에서 퍼블릭 URL 확인 (예: `mom-system.up.railway.app`)
+### 3단계 — 배포 완료 후 URL 확인
+
+- 빌드 로그가 끝나면 상단에 `https://mom-system-xxxx.onrender.com` 형태의 URL 자동 생성
+- 해당 URL로 접속하여 로그인
 
 ### 초기 계정
 
@@ -69,13 +62,9 @@ Variables 저장 시 자동으로 재배포됩니다.
 비밀번호: admin1234!
 ```
 
----
-
-## 🌐 Render 배포 (대안)
-
-[render.com](https://render.com) → GitHub 로그인 → New → Blueprint
-이 레포지토리를 선택하면 `render.yaml` 설정을 자동 감지합니다.
-**MySQL은 외부 서비스 (PlanetScale, Aiven 등) 연결 후 환경변수를 직접 입력하세요.**
+> **참고:** Render 무료 플랜은 15분 미사용 시 슬립 상태가 됩니다.
+> 처음 접속 시 약 30~60초 로딩 시간이 있을 수 있습니다.
+> 슬립에서 깨어나면 SQLite 인메모리 DB가 초기화되므로 시드 데이터(초기 계정·모듈)가 자동 복원됩니다.
 
 ---
 
@@ -86,14 +75,9 @@ Variables 저장 시 자동으로 재배포됩니다.
 - Docker Compose v2 이상
 
 ```bash
-# 1. 레포지토리 클론
 git clone https://github.com/asdsin/MOM.git
 cd MOM
-
-# 2. 환경변수 설정
 cp backend/.env.example backend/.env
-
-# 3. 실행
 docker-compose up -d
 ```
 
@@ -101,7 +85,7 @@ docker-compose up -d
 |---|---|
 | 프론트엔드 | http://localhost:5173 |
 | 백엔드 API | http://localhost:3001 |
-| API 헬스체크 | http://localhost:3001/api/health |
+| 헬스체크 | http://localhost:3001/api/health |
 
 ---
 
@@ -124,7 +108,6 @@ mysql -u root -p -e "
   FLUSH PRIVILEGES;
 "
 
-# 서버 실행 (테이블 자동 생성 + 시드)
 npm run dev
 ```
 
@@ -145,65 +128,27 @@ MOM/
 ├─ Dockerfile.prod          # 프로덕션 멀티스테이지 빌드
 ├─ docker-compose.yml       # 로컬 개발용
 ├─ railway.json             # Railway 배포 설정
-├─ render.yaml              # Render 배포 설정
+├─ render.yaml              # Render 무료 배포 설정
 ├─ backend/
 │  ├─ src/
-│  │  ├─ config/db.js       # MySQL 연결
+│  │  ├─ config/db.js       # MySQL / SQLite 자동 전환
 │  │  ├─ models/index.js    # Sequelize 모델 (23개 테이블)
 │  │  ├─ routes/
 │  │  │  ├─ auth.routes.js
 │  │  │  ├─ customer.routes.js
 │  │  │  ├─ master.routes.js    # 기준정보 + 룰빌더 API
 │  │  │  └─ diagnosis.routes.js # 진단 + Excel 보고서 API
-│  │  ├─ services/
-│  │  │  └─ DiagnosisEngine.js
-│  │  └─ middleware/auth.middleware.js
+│  │  └─ services/DiagnosisEngine.js
 │  └─ db/seeders/master.seed.js
-└─ frontend/
-   └─ src/
-      ├─ api/
-      ├─ store/
-      └─ pages/
-         ├─ Login.jsx
-         ├─ Dashboard.jsx
-         ├─ Customers/
-         ├─ Diagnosis/      # DiagnosisFlow + DiagnosisResult (Excel 출력)
-         └─ Master/         # MasterPage (룰빌더 + 템플릿 CRUD)
+└─ frontend/src/
+   ├─ api/
+   ├─ store/
+   └─ pages/
+      ├─ Dashboard.jsx
+      ├─ Customers/
+      ├─ Diagnosis/      # DiagnosisFlow + DiagnosisResult (Excel 출력)
+      └─ Master/         # MasterPage (룰빌더 + 템플릿 CRUD)
 ```
-
----
-
-## API 엔드포인트 요약
-
-### 인증
-| 메서드 | 경로 | 설명 |
-|---|---|---|
-| POST | /api/auth/register | 회원가입 |
-| POST | /api/auth/login | 로그인 (JWT 발급) |
-| GET  | /api/auth/me | 내 정보 조회 |
-
-### 고객사
-| 메서드 | 경로 | 설명 |
-|---|---|---|
-| GET  | /api/customers | 목록 |
-| POST | /api/customers | 등록 |
-| GET  | /api/customers/:id | 상세 (공장구조 포함) |
-
-### 기준정보 (Phase 3)
-| 메서드 | 경로 | 설명 |
-|---|---|---|
-| GET/POST/PUT/DELETE | /api/master/rules | 판정 룰 CRUD |
-| GET/POST/PUT/DELETE | /api/master/templates | 업종 템플릿 CRUD |
-
-### 진단
-| 메서드 | 경로 | 설명 |
-|---|---|---|
-| POST | /api/diagnosis/sessions | 세션 생성 |
-| PUT  | /api/diagnosis/sessions/:id/modules | 모듈 선택 |
-| POST | /api/diagnosis/sessions/:id/answers | 답변 저장 |
-| POST | /api/diagnosis/sessions/:id/calculate | 공수 산정 |
-| GET  | /api/diagnosis/sessions/:id/result | 결과 조회 |
-| GET  | /api/diagnosis/sessions/:id/export-excel | **Excel 보고서 다운로드** |
 
 ---
 
@@ -223,10 +168,10 @@ MOM/
 서버 최초 실행 시 자동으로 아래 데이터가 생성됩니다.
 
 - **모듈 8개**: 실적·공정 수집 / 설비·보전 / 품질 관리 / SOP 관리 / 이슈 관리 / 실적 집계 / ERP 연동 / 현장 인프라
-- **모듈 의존성 7개**: 의존성 그래프 자동 적용
+- **모듈 의존성 7개**
 - **판정 룰 4개**: Stage 1~3 자동 판정
 - **업종 템플릿 3개**: 전자조립 / 가공혼합 / 사출프레스
-- **수집 자료 체크리스트 9개**: 진단 결과 연동 자동 생성
+- **수집 자료 체크리스트 9개**
 
 ---
 

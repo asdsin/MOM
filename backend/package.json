@@ -21,7 +21,8 @@
     "express-validator": "^7.0.1",
     "helmet": "^7.0.0",
     "morgan": "^1.10.0",
-    "exceljs": "^4.3.0"
+    "exceljs": "^4.3.0",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",

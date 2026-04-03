@@ -3,25 +3,18 @@ services:
     name: mom-system
     runtime: docker
     dockerfilePath: ./Dockerfile.prod
-    plan: starter
+    plan: free
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3001
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
-        value: 3306
-      - key: DB_NAME
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASS
-        sync: false
+      # SQLite 인메모리 — 외부 DB 불필요, 시작 시 자동 시드
+      - key: DB_DIALECT
+        value: sqlite
+      - key: DB_STORAGE
+        value: ":memory:"
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 8h
-      - key: CORS_ORIGIN
-        sync: false
