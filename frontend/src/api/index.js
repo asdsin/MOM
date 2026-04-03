@@ -45,6 +45,14 @@ export const masterAPI = {
 
   getMasterdataMap:    (params) => api.get('/api/master/masterdata-map', { params }),
   getTemplates:        ()       => api.get('/api/master/templates'),
+  createTemplate:      (data)   => api.post('/api/master/templates', data),
+  updateTemplate:      (id, data) => api.put(`/api/master/templates/${id}`, data),
+  deleteTemplate:      (id)     => api.delete(`/api/master/templates/${id}`),
+
+  getRules:            ()       => api.get('/api/master/rules'),
+  createRule:          (data)   => api.post('/api/master/rules', data),
+  updateRule:          (id, data) => api.put(`/api/master/rules/${id}`, data),
+  deleteRule:          (id)     => api.delete(`/api/master/rules/${id}`),
 };
 
 // ── 진단 ────────────────────────────────────────────────────
@@ -56,4 +64,5 @@ export const diagnosisAPI = {
   calculate:           (id)           => api.post(`/api/diagnosis/sessions/${id}/calculate`),
   getResult:           (id)           => api.get(`/api/diagnosis/sessions/${id}/result`),
   getSessions:         (params)       => api.get('/api/diagnosis/sessions', { params }),
+  exportExcel:         (id)           => api.get(`/api/diagnosis/sessions/${id}/export-excel`, { responseType: 'blob' }),
 };

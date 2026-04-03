@@ -35,15 +35,28 @@ export default function DiagnosisResult() {
   const sm = result.stage_meta;
   const rows = result.effort_rows || result.module_efforts || [];
 
-  // 엑셀 다운로드 (백엔드 API 연동 → Phase 3에서 추가, 지금은 JSON)
-  const handleExport = () => {
-    const data = JSON.stringify(result, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a'); a.href = url;
-    a.download = `MOM_진단결과_${sessionId}_${new Date().toISOString().slice(0,10)}.json`;
-    a.click(); URL.revokeObjectURL(url);
-    toast.success('결과 파일 다운로드 완료');
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await diagnosisAPI.exportExcel(sessionId);
+      const blob = new Blob([res.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `MOM_진단결과_${sessionId}_${new Date().toISOString().slice(0,10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Excel 보고서 다운로드 완료');
+    } catch (e) {
+      console.error(e);
+      toast.error('Excel 다운로드 실패');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const TABS = ['공수 상세', '추진 일정', '수집 자료'];
@@ -215,12 +228,13 @@ export default function DiagnosisResult() {
 
         {/* 버튼 */}
         <div style={{ display:'flex', gap:10 }}>
-          <button onClick={handleExport} style={{
+          <button onClick={handleExport} disabled={exporting} style={{
             flex:1, padding:15, background:'linear-gradient(135deg,#C0392B,#922B21)',
             color:'#fff', border:'none', borderRadius:14, fontSize:14, fontWeight:700,
             cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center',
             justifyContent:'center', gap:8, boxShadow:'0 4px 16px rgba(192,57,43,.28)',
-          }}>📊 결과 저장</button>
+            opacity: exporting ? .6 : 1,
+          }}>{exporting ? '다운로드 중...' : '📊 Excel 보고서 다운로드'}</button>
           <button onClick={() => { reset(); navigate('/customers'); }} style={{
             flex:1, padding:15, background:'#fff', color:'rgba(26,10,10,.65)',
             border:'1.5px solid rgba(192,57,43,.28)', borderRadius:14, fontSize:14,

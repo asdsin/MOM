@@ -83,5 +83,44 @@ router.post('/masterdata-map', ...requireManager, async (req, res, next) => {
 router.get('/templates', async (req, res, next) => {
   try { res.json(await MasterTemplateIndustry.findAll({ where: { is_active: true } })); } catch (e) { next(e); }
 });
+router.post('/templates', ...requireManager, async (req, res, next) => {
+  try { res.status(201).json(await MasterTemplateIndustry.create(req.body)); } catch (e) { next(e); }
+});
+router.put('/templates/:id', ...requireManager, async (req, res, next) => {
+  try {
+    const t = await MasterTemplateIndustry.findByPk(req.params.id);
+    if (!t) return res.status(404).json({ error: '템플릿 없음' });
+    await t.update(req.body);
+    res.json({ message: '수정 완료' });
+  } catch (e) { next(e); }
+});
+router.delete('/templates/:id', ...requireManager, async (req, res, next) => {
+  try {
+    await MasterTemplateIndustry.update({ is_active: false }, { where: { id: req.params.id } });
+    res.json({ message: '삭제 완료' });
+  } catch (e) { next(e); }
+});
+
+// ── 판정 룰 CRUD ───────────────────────────────────────────
+router.get('/rules', ...requireInternal, async (req, res, next) => {
+  try { res.json(await MasterJudgmentRule.findAll({ where: { is_active: true }, order: [['priority','DESC']] })); } catch (e) { next(e); }
+});
+router.post('/rules', ...requireManager, async (req, res, next) => {
+  try { res.status(201).json(await MasterJudgmentRule.create(req.body)); } catch (e) { next(e); }
+});
+router.put('/rules/:id', ...requireManager, async (req, res, next) => {
+  try {
+    const r = await MasterJudgmentRule.findByPk(req.params.id);
+    if (!r) return res.status(404).json({ error: '룰 없음' });
+    await r.update({ ...req.body, version: r.version + 1 });
+    res.json({ message: '수정 완료' });
+  } catch (e) { next(e); }
+});
+router.delete('/rules/:id', ...requireManager, async (req, res, next) => {
+  try {
+    await MasterJudgmentRule.update({ is_active: false }, { where: { id: req.params.id } });
+    res.json({ message: '삭제 완료' });
+  } catch (e) { next(e); }
+});
 
 module.exports = router;
