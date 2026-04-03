@@ -72,9 +72,6 @@ export default function Login() {
           </button>
         </form>
 
-        <div style={{fontSize:11, color:'rgba(26,10,10,.35)', textAlign:'center', marginTop:20}}>
-          초기 계정: admin@wizfactory.com / admin1234!
-        </div>
       </div>
     </div>
   );
