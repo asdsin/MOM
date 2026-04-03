@@ -3,10 +3,16 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
+const { body } = require('express-validator');
 const { AuthUser, AuthLoginHistory, AuthAuditLog } = require('../models');
 const { requireAdmin } = require('../middleware/auth.middleware');
+const validate = require('../middleware/validate');
 
-router.post('/register', async (req, res, next) => {
+router.post('/register', validate([
+  body('email').notEmpty().withMessage('email 필수'),
+  body('password').isLength({ min: 6 }).withMessage('비밀번호 6자 이상'),
+  body('name').notEmpty().withMessage('name 필수'),
+]), async (req, res, next) => {
   try {
     const { email, password, name, tenant_id = 'default', role_code = 'sales_user' } = req.body;
     if (!email || !password || !name)
@@ -19,7 +25,10 @@ router.post('/register', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', validate([
+  body('email').notEmpty().withMessage('아이디를 입력해주세요'),
+  body('password').notEmpty().withMessage('비밀번호를 입력해주세요'),
+]), async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const ip = req.ip;

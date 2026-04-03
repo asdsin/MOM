@@ -10,10 +10,18 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
-          <div style={{ fontSize:16, color:'#C0392B', fontWeight:700 }}>페이지 로드 오류</div>
-          <div style={{ fontSize:13, color:'rgba(0,0,0,.5)' }}>{String(this.state.error?.message || this.state.error)}</div>
-          <button onClick={() => window.location.reload()} style={{ padding:'8px 20px', background:'#C0392B', color:'#fff', border:'none', borderRadius:10, cursor:'pointer' }}>새로고침</button>
+        <div className="login-wrap">
+          <div className="card" style={{ maxWidth: 400, textAlign: 'center' }}>
+            <div className="text-danger font-bold" style={{ fontSize: 16, marginBottom: 12 }}>
+              페이지 로드 오류
+            </div>
+            <div className="text-sm text-muted" style={{ marginBottom: 16 }}>
+              {String(this.state.error?.message || this.state.error)}
+            </div>
+            <button onClick={() => window.location.reload()} className="btn-primary">
+              새로고침
+            </button>
+          </div>
         </div>
       );
     }

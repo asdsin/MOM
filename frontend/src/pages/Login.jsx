@@ -3,24 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { authAPI } from '../api';
 import { useAuthStore } from '../store';
-
-const S = {
-  wrap:  { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
-           background:'radial-gradient(ellipse 80% 60% at 50% 30%, #FEF0EE 0%, #fff 70%)' },
-  box:   { background:'#fff', borderRadius:24, padding:'44px 36px', width:'100%', maxWidth:400,
-           boxShadow:'-4px -4px 12px rgba(255,180,170,.55), 4px 4px 14px rgba(146,43,33,.22), inset 1px 1px 4px rgba(255,220,210,.80)' },
-  logo:  { fontSize:24, fontWeight:900, letterSpacing:'-.03em', color:'#1a0a0a', marginBottom:6 },
-  sub:   { fontSize:13, color:'rgba(26,10,10,.55)', marginBottom:32 },
-  label: { display:'block', fontSize:12, fontWeight:700, color:'rgba(26,10,10,.65)', marginBottom:6 },
-  input: { width:'100%', padding:'12px 14px', border:'1.5px solid rgba(192,57,43,.28)',
-           borderRadius:12, fontSize:15, fontFamily:'inherit', outline:'none',
-           background:'#fdf8f7', marginBottom:16,
-           boxShadow:'inset -1px -1px 3px rgba(255,220,210,.7), inset 1px 1px 3px rgba(146,43,33,.12)' },
-  btn:   { width:'100%', padding:'14px', border:'none', borderRadius:14, fontSize:15, fontWeight:700,
-           fontFamily:'inherit', marginTop:8, transition:'background .2s' },
-  err:   { fontSize:12, color:'#C0392B', marginBottom:12, padding:'10px 14px',
-           background:'rgba(192,57,43,.06)', borderRadius:10 },
-};
+import { getErrorMessage } from '../utils/getErrorMessage';
 
 export default function Login() {
   const [email, setEmail]     = useState('');
@@ -32,14 +15,6 @@ export default function Login() {
 
   const canSubmit = email.trim() !== '' && password.trim() !== '' && !loading;
 
-  const btnStyle = {
-    ...S.btn,
-    background: canSubmit ? 'linear-gradient(135deg, #C0392B, #922B21)' : '#ccc',
-    color: '#fff',
-    cursor: canSubmit ? 'pointer' : 'not-allowed',
-    boxShadow: canSubmit ? '0 4px 16px rgba(192,57,43,.28)' : 'none',
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) { setError('이메일과 비밀번호를 입력해주세요'); return; }
@@ -50,34 +25,35 @@ export default function Login() {
       toast.success(`${data.user.name}님, 환영합니다!`);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || '로그인에 실패했습니다');
+      setError(getErrorMessage(err, '로그인에 실패했습니다'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={S.wrap}>
-      <div style={S.box}>
-        <div style={S.logo}>WIZ<span style={{color:'#C0392B'}}>-Flow</span></div>
-        <div style={S.sub}>MOM 수준진단 시스템</div>
+    <div className="login-wrap">
+      <div className="login-box">
+        <div className="login-logo">WIZ<span className="accent">-Flow</span></div>
+        <div className="login-sub">MOM 수준진단 시스템</div>
 
-        {error && <div style={S.err}>{error}</div>}
+        {error && <div className="error-box">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <label style={S.label}>아이디</label>
-          <input style={S.input} type="text" value={email}
+          <label className="form-label">아이디</label>
+          <input className="form-input-login" type="text" value={email}
                  onChange={e => setEmail(e.target.value)}
                  placeholder="아이디를 입력하세요"
                  autoComplete="off" autoFocus />
 
-          <label style={S.label}>비밀번호</label>
-          <input style={S.input} type="password" value={password}
+          <label className="form-label">비밀번호</label>
+          <input className="form-input-login" type="password" value={password}
                  onChange={e => setPassword(e.target.value)}
                  placeholder="••••••••"
                  autoComplete="new-password" />
 
-          <button style={btnStyle} type="submit" disabled={!canSubmit}>
+          <button className="btn-primary btn-block" type="submit" disabled={!canSubmit}
+                  style={{ marginTop: 8, fontSize: 15 }}>
             {loading ? '로그인 중...' : '로그인'}
           </button>
         </form>

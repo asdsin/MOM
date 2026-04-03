@@ -2,11 +2,13 @@
 'use strict';
 const router  = require('express').Router();
 const ExcelJS = require('exceljs');
-const { DiagnosisSession, DiagnosisAnswer, DiagnosisResult,
+const { body } = require('express-validator');
+const { sequelize, DiagnosisSession, DiagnosisAnswer, DiagnosisResult,
         DiagnosisResultEffort, DiagnosisReport, MasterModule,
         RelModuleDependency, CustomerCompany } = require('../models');
 const DiagnosisEngine = require('../services/DiagnosisEngine');
 const { requireInternal, requireAny } = require('../middleware/auth.middleware');
+const validate = require('../middleware/validate');
 
 // ── 의존성 포함 전체 모듈 목록 ──────────────────────────────
 router.get('/modules/available', async (req, res, next) => {
@@ -38,7 +40,9 @@ router.get('/modules/available', async (req, res, next) => {
 });
 
 // ── 진단 세션 생성 ──────────────────────────────────────────
-router.post('/sessions', ...requireInternal, async (req, res, next) => {
+router.post('/sessions', ...requireInternal, validate([
+  body('company_id').isInt().withMessage('고객사 ID 필수'),
+]), async (req, res, next) => {
   try {
     const { company_id, template_cd, selected_modules = [] } = req.body;
     if (!company_id) return res.status(400).json({ error: 'company_id 필수' });
@@ -70,7 +74,10 @@ router.put('/sessions/:id/modules', ...requireInternal, async (req, res, next) =
 });
 
 // ── 답변 저장 (단건 upsert) ─────────────────────────────────
-router.post('/sessions/:id/answers', ...requireInternal, async (req, res, next) => {
+router.post('/sessions/:id/answers', ...requireInternal, validate([
+  body('module_cd').notEmpty().withMessage('module_cd 필수'),
+  body('answer_val').isIn(['y', 'n']).withMessage('answer_val은 y 또는 n'),
+]), async (req, res, next) => {
   try {
     const session = await DiagnosisSession.findByPk(req.params.id);
     if (!session) return res.status(404).json({ error: '세션 없음' });
@@ -91,26 +98,31 @@ router.post('/sessions/:id/answers', ...requireInternal, async (req, res, next) 
 
 // ── 공수 산정 + 판정 결과 저장 ─────────────────────────────
 router.post('/sessions/:id/calculate', ...requireInternal, async (req, res, next) => {
+  const transaction = await sequelize.transaction();
   try {
     const session = await DiagnosisSession.findOne({
       where: { id: req.params.id },
       include: [{ model: DiagnosisAnswer, as: 'answers' }],
     });
-    if (!session) return res.status(404).json({ error: '세션 없음' });
+    if (!session) { await transaction.rollback(); return res.status(404).json({ error: '세션 없음' }); }
 
     const selected = session.selected_modules || [];
     const answers  = Object.fromEntries(session.answers.map(a => [a.module_cd, a.answer_val]));
 
     // 미답변 체크
     const unanswered = selected.filter(m => !answers[m]);
-    if (unanswered.length)
+    if (unanswered.length) {
+      await transaction.rollback();
       return res.status(400).json({ error: '미답변 모듈', modules: unanswered });
+    }
 
     const effortData = await DiagnosisEngine.calcEffort(selected, answers);
     const stageNo    = await DiagnosisEngine.calcStage(selected, answers);
-    const result     = await DiagnosisEngine.saveResult(session, effortData, stageNo);
+    const result     = await DiagnosisEngine.saveResult(session, effortData, stageNo, { transaction });
     const checklist  = await DiagnosisEngine.buildChecklist(selected, answers);
-    const stageMeta  = DiagnosisEngine.getStageMeta(stageNo);
+    const stageMeta  = await DiagnosisEngine.getStageMeta(stageNo);
+
+    await transaction.commit();
 
     res.json({
       result_id:       result.id,
@@ -122,7 +134,7 @@ router.post('/sessions/:id/calculate', ...requireInternal, async (req, res, next
       api_warns:       effortData.apiWarns,
       checklist,
     });
-  } catch (e) { next(e); }
+  } catch (e) { await transaction.rollback(); next(e); }
 });
 
 // ── 결과 조회 ───────────────────────────────────────────────
@@ -139,7 +151,7 @@ router.get('/sessions/:id/result', ...requireAny, async (req, res, next) => {
       return res.status(404).json({ error: '결과가 없습니다. 먼저 calculate를 실행하세요.' });
 
     const result = session.results[session.results.length - 1];
-    const stageMeta = DiagnosisEngine.getStageMeta(result.stage_no);
+    const stageMeta = await DiagnosisEngine.getStageMeta(result.stage_no);
     res.json({
       session_id:      session.id,
       company_id:      session.company_id,
@@ -172,7 +184,7 @@ router.get('/sessions/:id/export-excel', ...requireAny, async (req, res, next) =
 
     const result = session.results[session.results.length - 1];
     const efforts = result.efforts || [];
-    const sm = DiagnosisEngine.getStageMeta(result.stage_no);
+    const sm = await DiagnosisEngine.getStageMeta(result.stage_no);
     const checklist = await DiagnosisEngine.buildChecklist(
       session.selected_modules || [],
       result.snapshot_json?.answers || {}

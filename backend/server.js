@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3001;
   // MySQL 개발: alter=true / MySQL 운영: 변경 없음
   const dialect = process.env.DB_DIALECT || 'mysql';
   const syncOpt = dialect === 'sqlite'
-    ? { force: true }
+    ? { force: process.env.DB_STORAGE === ':memory:' }
     : { alter: process.env.NODE_ENV === 'development' };
   await sequelize.sync(syncOpt);
   console.log('✅ DB 동기화 완료');

@@ -47,9 +47,25 @@ app.use((req, res) => {
 // ── 전역 에러 핸들러 ─────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err.stack || err.message);
-  const status = err.status || 500;
+  let status = err.status || 500;
+  let message = String(err.message || '서버 오류가 발생했습니다');
+  let code = 'SERVER_ERROR';
+
+  if (err.name === 'SequelizeValidationError') {
+    status = 400; code = 'VALIDATION_ERROR';
+    message = err.errors?.map(e => e.message).join(', ') || message;
+  } else if (err.name === 'SequelizeUniqueConstraintError') {
+    status = 409; code = 'DUPLICATE_ERROR';
+    message = '이미 존재하는 데이터입니다';
+  } else if (err.name === 'SequelizeForeignKeyConstraintError') {
+    status = 400; code = 'FK_ERROR';
+    message = '참조 데이터가 존재하지 않습니다';
+  }
+
   res.status(status).json({
-    error: err.message || '서버 오류가 발생했습니다',
+    success: false,
+    error: message,
+    code,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 });

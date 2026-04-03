@@ -13,7 +13,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 응답 인터셉터 — 401 시 로그인으로 이동
+// 응답 인터셉터 — 401 자동 리다이렉트 + 에러 정규화
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -21,6 +21,10 @@ api.interceptors.response.use(
       localStorage.removeItem('mom_token');
       localStorage.removeItem('mom_user');
       window.location.href = '/login';
+    }
+    // 에러 메시지를 항상 string으로 정규화
+    if (err.response?.data && typeof err.response.data.error === 'object') {
+      err.response.data.error = err.response.data.error.message || JSON.stringify(err.response.data.error);
     }
     return Promise.reject(err);
   }

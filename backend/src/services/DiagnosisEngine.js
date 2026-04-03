@@ -5,7 +5,7 @@
  * Phase 2: DB 룰만으로 동작
  */
 const {
-  MasterModule, MasterJudgmentRule, RelModuleDependency,
+  MasterModule, MasterJudgmentRule, MasterMaturityStage, RelModuleDependency,
   RelModuleMasterdata, DiagnosisSession, DiagnosisAnswer,
   DiagnosisResult, DiagnosisResultEffort, DiagnosisReport,
 } = require('../models');
@@ -67,10 +67,14 @@ class DiagnosisEngine {
       api_warn: null,
     });
 
+    // Single query instead of N+1
+    const modules = await MasterModule.findAll({
+      where: { module_cd: selectedModules, is_active: true },
+    });
+    const modMap = new Map(modules.map(m => [m.module_cd, m]));
+
     for (const module_cd of selectedModules) {
-      const mod = await MasterModule.findOne({
-        where: { module_cd, is_active: true },
-      });
+      const mod = modMap.get(module_cd);
       if (!mod) continue;
 
       const ans = answers[module_cd] || 'n';
@@ -132,27 +136,27 @@ class DiagnosisEngine {
    */
   static async buildChecklist(selectedModules, answers) {
     const items = [];
-    // 공통 항목
-    const common = await RelModuleMasterdata.findAll({
-      where: { module_cd: 'common', is_active: true },
-    });
-    items.push(...common.map(i => ({ text: i.checklist_item, tag: i.priority_tag, color: i.color_hex })));
+    // n 답변 모듈만 필터
+    const nModules = selectedModules.filter(m => answers[m] === 'n');
 
-    // 모듈별 조건부 항목 (없음=n 답변 모듈만)
-    for (const module_cd of selectedModules) {
-      if (answers[module_cd] !== 'n') continue;
-      const modItems = await RelModuleMasterdata.findAll({
-        where: { module_cd, is_active: true },
-      });
-      items.push(...modItems.map(i => ({ text: i.checklist_item, tag: i.priority_tag, color: i.color_hex })));
-    }
+    // Single query for common + all relevant modules
+    const allItems = await RelModuleMasterdata.findAll({
+      where: { module_cd: ['common', ...nModules], is_active: true },
+    });
+
+    // 공통 항목 먼저, 그 다음 모듈별 항목
+    const commonItems = allItems.filter(i => i.module_cd === 'common');
+    const moduleItems = allItems.filter(i => i.module_cd !== 'common');
+
+    items.push(...commonItems.map(i => ({ text: i.checklist_item, tag: i.priority_tag, color: i.color_hex })));
+    items.push(...moduleItems.map(i => ({ text: i.checklist_item, tag: i.priority_tag, color: i.color_hex })));
     return items;
   }
 
   /**
    * 판정 결과 DB 저장 (스냅샷 포함 — 재현 가능)
    */
-  static async saveResult(session, effortData, stageNo) {
+  static async saveResult(session, effortData, stageNo, { transaction } = {}) {
     const sm = STAGE_META[stageNo] || STAGE_META[1];
     const result = await DiagnosisResult.create({
       session_id:          session.id,
@@ -170,18 +174,24 @@ class DiagnosisEngine {
         rule_version:     session.rule_version,
         created_at:       new Date().toISOString(),
       },
-    });
+    }, { transaction });
 
     // 모듈별 공수 상세 저장
     await DiagnosisResultEffort.bulkCreate(
-      effortData.rows.map(r => ({ ...r, result_id: result.id }))
+      effortData.rows.map(r => ({ ...r, result_id: result.id })),
+      { transaction }
     );
 
-    await session.update({ status: 'completed', completed_at: new Date() });
+    await session.update({ status: 'completed', completed_at: new Date() }, { transaction });
     return result;
   }
 
-  static getStageMeta(stageNo) {
+  static async getStageMeta(stageNo) {
+    const stage = await MasterMaturityStage.findOne({ where: { stage_no: stageNo } });
+    if (stage) return {
+      badge: stage.badge_txt, title: stage.title_txt, desc: stage.desc_txt,
+      color: `#${stage.color_hex}`, bg: `#${stage.color_hex}08`, bc: `#${stage.color_hex}30`,
+    };
     return STAGE_META[stageNo] || STAGE_META[1];
   }
 }

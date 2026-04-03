@@ -2,12 +2,14 @@
 'use strict';
 const router = require('express').Router();
 const { Op } = require('sequelize');
+const { body } = require('express-validator');
 const {
   CustomerCompany, CustomerSite, CustomerFactory,
   CustomerLine, CustomerProcess, CustomerEquipment,
   CustomerExternalSystem
 } = require('../models');
 const { requireInternal, requireManager } = require('../middleware/auth.middleware');
+const validate = require('../middleware/validate');
 
 // 고객사 목록
 router.get('/', ...requireInternal, async (req, res, next) => {
@@ -25,7 +27,9 @@ router.get('/', ...requireInternal, async (req, res, next) => {
 });
 
 // 고객사 등록
-router.post('/', ...requireInternal, async (req, res, next) => {
+router.post('/', ...requireInternal, validate([
+  body('company_nm').notEmpty().withMessage('고객사명 필수'),
+]), async (req, res, next) => {
   try {
     const company = await CustomerCompany.create({
       ...req.body,
