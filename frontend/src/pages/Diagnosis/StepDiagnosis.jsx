@@ -39,13 +39,14 @@ export default function StepDiagnosis({ onNext, onBack, loading }) {
                   {STAGE_LABELS[m.stage_no]}
                 </span>
               </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 3, lineHeight: 1.5 }}>
-                {availableModules.find(x => x.module_cd === module_cd)?.questions?.[0]?.question_txt
-                  || `${m.module_nm}를 현재 시스템으로 관리하고 있나요?`}
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 5, lineHeight: 1.6 }}>
+                {m.question_txt || `현재 ${m.module_nm} 기능을 시스템으로 운영하고 있나요?`}
               </div>
-              <div className="text-xs" style={{ color: 'var(--t3)', marginBottom: 10 }}>
-                {m.description}
-              </div>
+              {m.hint_txt && (
+                <div className="text-xs" style={{ color: 'var(--t3)', marginBottom: 10, lineHeight: 1.5 }}>
+                  {m.hint_txt}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 8 }}>
                 {['y', 'n'].map(v => (
                   <button

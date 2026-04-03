@@ -4,30 +4,40 @@ const router  = require('express').Router();
 const ExcelJS = require('exceljs');
 const { body } = require('express-validator');
 const { sequelize, DiagnosisSession, DiagnosisAnswer, DiagnosisResult,
-        DiagnosisResultEffort, DiagnosisReport, MasterModule,
+        DiagnosisResultEffort, DiagnosisReport, MasterModule, MasterQuestion,
         RelModuleDependency, CustomerCompany } = require('../models');
 const DiagnosisEngine = require('../services/DiagnosisEngine');
 const { requireInternal, requireAny } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate');
 
-// ── 의존성 포함 전체 모듈 목록 ──────────────────────────────
+// ── 의존성 + 질문 포함 전체 모듈 목록 ───────────────────────
 router.get('/modules/available', async (req, res, next) => {
   try {
     const modules = await MasterModule.findAll({
       where: { is_active: true }, order: [['stage_no','ASC'],['id','ASC']],
     });
-    const deps = await RelModuleDependency.findAll({ where: { rel_type: 'required', is_active: true } });
+    const [deps, questions] = await Promise.all([
+      RelModuleDependency.findAll({ where: { rel_type: 'required', is_active: true } }),
+      MasterQuestion.findAll(),
+    ]);
+
     const depMap = {};
     deps.forEach(d => {
       if (!depMap[d.child_module_cd]) depMap[d.child_module_cd] = [];
       depMap[d.child_module_cd].push(d.parent_module_cd);
     });
+
+    const qMap = {};
+    questions.forEach(q => { qMap[q.module_id] = q; });
+
     res.json(modules.map(m => ({
       module_cd:         m.module_cd,
       module_nm:         m.module_nm,
       description:       m.description,
       stage_no:          m.stage_no,
       requires:          depMap[m.module_cd] || [],
+      question_txt:      qMap[m.id]?.question_txt || null,
+      hint_txt:          qMap[m.id]?.hint_txt     || null,
       default_effort_y:  parseFloat(m.default_effort_y),
       default_effort_n:  parseFloat(m.default_effort_n),
       effort_type_y:     m.effort_type_y,
