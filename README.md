@@ -14,29 +14,86 @@
 
 ---
 
-## 빠른 시작 (Docker)
+## 🌐 Railway 클라우드 배포 (추천)
+
+Railway는 MySQL + Node.js를 무료로 지원하는 클라우드 플랫폼입니다.
+**단 5분** 안에 퍼블릭 URL을 생성할 수 있습니다.
+
+### 1단계 — Railway 계정 생성
+[railway.app](https://railway.app) → GitHub 계정으로 가입
+
+### 2단계 — 새 프로젝트 생성
+
+```
+New Project → Deploy from GitHub repo → asdsin/MOM 선택
+```
+
+### 3단계 — MySQL 데이터베이스 추가
+
+```
+프로젝트 대시보드 → + New → Database → MySQL
+```
+
+MySQL 서비스가 추가되면 **Connect** 탭에서 아래 값을 복사합니다:
+- `MYSQL_HOST`
+- `MYSQL_PORT`
+- `MYSQL_DATABASE`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+
+### 4단계 — 서비스 환경변수 설정
+
+MOM 서비스 클릭 → **Variables** 탭 → 아래 변수 입력:
+
+| 변수명 | 값 |
+|---|---|
+| `DB_HOST` | MySQL의 MYSQL_HOST 값 |
+| `DB_PORT` | MySQL의 MYSQL_PORT 값 |
+| `DB_NAME` | MySQL의 MYSQL_DATABASE 값 |
+| `DB_USER` | MySQL의 MYSQL_USER 값 |
+| `DB_PASS` | MySQL의 MYSQL_PASSWORD 값 |
+| `JWT_SECRET` | 임의의 긴 문자열 (예: `mom-secret-xyz-2024`) |
+| `JWT_EXPIRES_IN` | `8h` |
+| `NODE_ENV` | `production` |
+| `PORT` | `3001` |
+
+### 5단계 — 배포 확인
+
+Variables 저장 시 자동으로 재배포됩니다.
+**Settings → Domains** 에서 퍼블릭 URL 확인 (예: `mom-system.up.railway.app`)
+
+### 초기 계정
+
+```
+이메일: admin@wizfactory.com
+비밀번호: admin1234!
+```
+
+---
+
+## 🌐 Render 배포 (대안)
+
+[render.com](https://render.com) → GitHub 로그인 → New → Blueprint
+이 레포지토리를 선택하면 `render.yaml` 설정을 자동 감지합니다.
+**MySQL은 외부 서비스 (PlanetScale, Aiven 등) 연결 후 환경변수를 직접 입력하세요.**
+
+---
+
+## 빠른 시작 (로컬 Docker)
 
 ### 사전 요구사항
 - Docker Desktop 설치
 - Docker Compose v2 이상
 
-### 1. 레포지토리 클론 / 파일 준비
-
 ```bash
-# mom-system/ 디렉토리 이동
-cd mom-system
-```
+# 1. 레포지토리 클론
+git clone https://github.com/asdsin/MOM.git
+cd MOM
 
-### 2. 환경변수 설정
-
-```bash
+# 2. 환경변수 설정
 cp backend/.env.example backend/.env
-# backend/.env 파일에서 필요시 DB 정보 수정
-```
 
-### 3. Docker Compose 실행
-
-```bash
+# 3. 실행
 docker-compose up -d
 ```
 
@@ -46,44 +103,32 @@ docker-compose up -d
 | 백엔드 API | http://localhost:3001 |
 | API 헬스체크 | http://localhost:3001/api/health |
 
-### 4. 초기 계정
-
-```
-이메일: admin@wizfactory.com
-비밀번호: admin1234!
-```
-
 ---
 
 ## 로컬 개발 (Docker 없이)
 
-### 사전 요구사항
-- Node.js 18+
-- MySQL 8.0 (로컬 설치 또는 클라우드)
-
-### 1. 백엔드 설정
+### 백엔드
 
 ```bash
 cd backend
 npm install
 
-# .env 파일 수정 (DB 정보 입력)
-cp .env backend/.env
-# DB_HOST=localhost, DB_NAME=mom_system 등 수정
+# .env 작성 (DB 정보 입력)
+cp .env.example .env
 
 # MySQL에서 DB 생성
-mysql -u root -p
-CREATE DATABASE mom_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'mom_user'@'localhost' IDENTIFIED BY 'mom1234';
-GRANT ALL PRIVILEGES ON mom_system.* TO 'mom_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
+mysql -u root -p -e "
+  CREATE DATABASE mom_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  CREATE USER 'mom_user'@'localhost' IDENTIFIED BY 'mom1234';
+  GRANT ALL PRIVILEGES ON mom_system.* TO 'mom_user'@'localhost';
+  FLUSH PRIVILEGES;
+"
 
-# 서버 실행 (자동으로 테이블 생성 + 시드 실행)
+# 서버 실행 (테이블 자동 생성 + 시드)
 npm run dev
 ```
 
-### 2. 프론트엔드 설정
+### 프론트엔드
 
 ```bash
 cd frontend
@@ -96,33 +141,34 @@ npm run dev
 ## 프로젝트 구조
 
 ```
-mom-system/
+MOM/
+├─ Dockerfile.prod          # 프로덕션 멀티스테이지 빌드
+├─ docker-compose.yml       # 로컬 개발용
+├─ railway.json             # Railway 배포 설정
+├─ render.yaml              # Render 배포 설정
 ├─ backend/
 │  ├─ src/
-│  │  ├─ config/db.js           # MySQL 연결
-│  │  ├─ models/index.js        # Sequelize 모델 23개 테이블
+│  │  ├─ config/db.js       # MySQL 연결
+│  │  ├─ models/index.js    # Sequelize 모델 (23개 테이블)
 │  │  ├─ routes/
-│  │  │  ├─ auth.routes.js      # 로그인/회원가입
-│  │  │  ├─ customer.routes.js  # 고객사 CRUD
-│  │  │  ├─ master.routes.js    # 기준정보 관리
-│  │  │  └─ diagnosis.routes.js # 진단 세션/결과
+│  │  │  ├─ auth.routes.js
+│  │  │  ├─ customer.routes.js
+│  │  │  ├─ master.routes.js    # 기준정보 + 룰빌더 API
+│  │  │  └─ diagnosis.routes.js # 진단 + Excel 보고서 API
 │  │  ├─ services/
-│  │  │  └─ DiagnosisEngine.js  # 판정·공수 산정 엔진
-│  │  └─ middleware/
-│  │     └─ auth.middleware.js  # JWT + 역할 기반 권한
-│  ├─ db/seeders/master.seed.js # 6대 모듈 초기 데이터
-│  └─ server.js                 # 서버 진입점
-├─ frontend/
-│  └─ src/
-│     ├─ api/                   # Axios 인스턴스 + API 함수
-│     ├─ store/                 # Zustand 전역 상태
-│     ├─ pages/
-│     │  ├─ Login.jsx
-│     │  ├─ Dashboard.jsx
-│     │  ├─ Customers/          # 고객사 목록/등록/상세
-│     │  └─ Diagnosis/          # 진단 플로우/결과
-│     └─ components/Layout.jsx
-└─ docker-compose.yml
+│  │  │  └─ DiagnosisEngine.js
+│  │  └─ middleware/auth.middleware.js
+│  └─ db/seeders/master.seed.js
+└─ frontend/
+   └─ src/
+      ├─ api/
+      ├─ store/
+      └─ pages/
+         ├─ Login.jsx
+         ├─ Dashboard.jsx
+         ├─ Customers/
+         ├─ Diagnosis/      # DiagnosisFlow + DiagnosisResult (Excel 출력)
+         └─ Master/         # MasterPage (룰빌더 + 템플릿 CRUD)
 ```
 
 ---
@@ -143,15 +189,21 @@ mom-system/
 | POST | /api/customers | 등록 |
 | GET  | /api/customers/:id | 상세 (공장구조 포함) |
 
+### 기준정보 (Phase 3)
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET/POST/PUT/DELETE | /api/master/rules | 판정 룰 CRUD |
+| GET/POST/PUT/DELETE | /api/master/templates | 업종 템플릿 CRUD |
+
 ### 진단
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET  | /api/diagnosis/modules/available | 모듈 목록 (의존성 포함) |
 | POST | /api/diagnosis/sessions | 세션 생성 |
-| PUT  | /api/diagnosis/sessions/:id/modules | 모듈 선택 + 의존성 검증 |
+| PUT  | /api/diagnosis/sessions/:id/modules | 모듈 선택 |
 | POST | /api/diagnosis/sessions/:id/answers | 답변 저장 |
-| POST | /api/diagnosis/sessions/:id/calculate | 공수 산정 + 판정 |
+| POST | /api/diagnosis/sessions/:id/calculate | 공수 산정 |
 | GET  | /api/diagnosis/sessions/:id/result | 결과 조회 |
+| GET  | /api/diagnosis/sessions/:id/export-excel | **Excel 보고서 다운로드** |
 
 ---
 
@@ -160,8 +212,8 @@ mom-system/
 | Phase | 내용 | 상태 |
 |---|---|---|
 | Phase 1 | DB + 인증 + 고객등록 + 진단저장 | ✅ 완료 |
-| Phase 2 | 기준정보 관리 UI + DB 룰 기반 판정 엔진 | 🔜 예정 |
-| Phase 3 | 연관성 설정 화면 + 보고서 Excel/PDF 출력 | 🔜 예정 |
+| Phase 2 | 기준정보 관리 UI + DB 룰 기반 판정 엔진 | ✅ 완료 |
+| Phase 3 | 룰빌더 UI + 템플릿 CRUD + Excel 보고서 출력 | ✅ 완료 |
 | Phase 4 | 제안서 자동생성 + 히스토리 비교 + SSO | 🔜 예정 |
 
 ---

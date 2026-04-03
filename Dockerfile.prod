@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────
+# Stage 1: React 프론트엔드 빌드
+# ─────────────────────────────────────────────────────────
+FROM node:18-alpine AS frontend-build
+WORKDIR /frontend
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ .
+
+# VITE_API_URL = '' → 같은 오리진의 /api/* 로 요청
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
+
+RUN npm run build
+
+# ─────────────────────────────────────────────────────────
+# Stage 2: Node.js 백엔드 + 프론트엔드 정적 파일
+# ─────────────────────────────────────────────────────────
+FROM node:18-alpine
+WORKDIR /app
+
+COPY backend/package*.json ./
+RUN npm ci --only=production
+
+COPY backend/ .
+
+# 빌드된 프론트엔드 → backend/public/
+COPY --from=frontend-build /frontend/dist ./public
+
+ENV NODE_ENV=production
+
+EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget -qO- http://localhost:3001/api/health || exit 1
+
+CMD ["node", "server.js"]

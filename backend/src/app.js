@@ -1,17 +1,24 @@
 'use strict';
 require('dotenv').config();
+const path     = require('path');
 const express  = require('express');
 const cors     = require('cors');
 const helmet   = require('helmet');
 const morgan   = require('morgan');
 
 const app = express();
+const isProd = process.env.NODE_ENV === 'production';
 
 // ── 미들웨어 ────────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
-app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
+app.use(morgan(isProd ? 'combined' : 'dev'));
+
+// ── 프로덕션: 프론트엔드 정적 파일 서빙 ─────────────────────
+if (isProd) {
+  app.use(express.static(path.join(__dirname, '../public')));
+}
 
 // ── 라우터 ──────────────────────────────────────────────────
 app.use('/api/auth',      require('./routes/auth.routes'));
@@ -25,7 +32,14 @@ app.get('/api/health', (req, res) => {
              time: new Date().toISOString() });
 });
 
-// ── 404 ─────────────────────────────────────────────────────
+// ── 프로덕션: React Router SPA 지원 (catch-all) ───────────────
+if (isProd) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+  });
+}
+
+// ── 404 (개발용) ─────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ error: `Not Found: ${req.method} ${req.path}` });
 });
