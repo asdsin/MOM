@@ -44,7 +44,7 @@ const testConnection = async () => {
     console.log(`✅ ${dialect.toUpperCase()} 연결 성공`);
   } catch (err) {
     console.error(`❌ DB 연결 실패 (${dialect}):`, err.message);
-    process.exit(1);
+    throw err;
   }
 };
 
