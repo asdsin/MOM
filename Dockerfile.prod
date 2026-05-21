@@ -9,30 +9,37 @@ RUN npm ci
 
 COPY frontend/ .
 
-# VITE_API_URL = '' → 같은 오리진의 /api/* 로 요청
-ARG VITE_API_URL=""
-ENV VITE_API_URL=$VITE_API_URL
-
+# VITE_API_URL 빈값 = 같은 서버의 /api/* 사용
+ENV VITE_API_URL=""
 RUN npm run build
 
 # ─────────────────────────────────────────────────────────
-# Stage 2: Node.js 백엔드 + 프론트엔드 정적 파일
+# Stage 2: 백엔드 + 프론트 정적파일 통합
 # ─────────────────────────────────────────────────────────
 FROM node:18-alpine
 WORKDIR /app
 
+# sqlite3 네이티브 빌드 도구 설치
+RUN apk add --no-cache python3 make g++
+
 COPY backend/package*.json ./
-# sqlite3 네이티브 모듈 컴파일을 위한 빌드 도구
-RUN apk add --no-cache python3 make g++ && \
-    npm ci --only=production && \
-    apk del python3 make g++
+RUN npm ci --only=production
+
+# 빌드 도구 제거 (이미지 경량화)
+RUN apk del python3 make g++
 
 COPY backend/ .
 
-# 빌드된 프론트엔드 → backend/public/
+# 빌드된 React 앱 → /app/public/
 COPY --from=frontend-build /frontend/dist ./public
 
+# 데이터 디렉토리 생성
+RUN mkdir -p /app/data
+
 ENV NODE_ENV=production
+ENV DB_DIALECT=sqlite
+ENV DB_STORAGE=/app/data/mom_system.db
+ENV PORT=3001
 
 EXPOSE 3001
 
