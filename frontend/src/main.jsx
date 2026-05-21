@@ -4,6 +4,17 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import './styles.css';
+import Login           from './pages/Login';
+import Dashboard       from './pages/Dashboard';
+import CustomerList    from './pages/Customers/CustomerList';
+import CustomerForm    from './pages/Customers/CustomerForm';
+import CustomerDetail  from './pages/Customers/CustomerDetail';
+import DiagnosisFlow   from './pages/Diagnosis/DiagnosisFlow';
+import DiagnosisResult from './pages/Diagnosis/DiagnosisResult';
+import MasterPage      from './pages/Master/MasterPage';
+import RelationPage    from './pages/Relation/RelationPage';
+import DiagnosisHistory from './pages/History/DiagnosisHistory';
+import { useAuthStore } from './store';
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
@@ -30,17 +41,6 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-import Login        from './pages/Login';
-import Dashboard    from './pages/Dashboard';
-import CustomerList from './pages/Customers/CustomerList';
-import CustomerForm from './pages/Customers/CustomerForm';
-import CustomerDetail from './pages/Customers/CustomerDetail';
-import DiagnosisFlow from './pages/Diagnosis/DiagnosisFlow';
-import DiagnosisResult from './pages/Diagnosis/DiagnosisResult';
-import MasterPage   from './pages/Master/MasterPage';
-
-import { useAuthStore } from './store';
-
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30000 } } });
 
 function PrivateRoute({ children }) {
@@ -63,6 +63,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/diagnosis/:companyId" element={<PrivateRoute><DiagnosisFlow /></PrivateRoute>} />
           <Route path="/diagnosis/result/:sessionId" element={<PrivateRoute><DiagnosisResult /></PrivateRoute>} />
           <Route path="/master" element={<PrivateRoute><MasterPage /></PrivateRoute>} />
+          <Route path="/relation" element={<PrivateRoute><RelationPage /></PrivateRoute>} />
+          <Route path="/history/:companyId" element={<PrivateRoute><DiagnosisHistory /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

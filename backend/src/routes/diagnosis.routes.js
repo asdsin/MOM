@@ -5,7 +5,7 @@ const ExcelJS = require('exceljs');
 const { body } = require('express-validator');
 const { sequelize, DiagnosisSession, DiagnosisAnswer, DiagnosisResult,
         DiagnosisResultEffort, DiagnosisReport, MasterModule, MasterQuestion,
-        RelModuleDependency, CustomerCompany } = require('../models');
+        RelModuleDependency, CustomerCompany, AuthUser } = require('../models');
 const DiagnosisEngine = require('../services/DiagnosisEngine');
 const { requireInternal, requireAny } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate');
@@ -377,3 +377,99 @@ router.get('/sessions', ...requireInternal, async (req, res, next) => {
 });
 
 module.exports = router;
+// ── ① 고객사별 진단 히스토리 목록 ──────────────────────────
+router.get('/history/:companyId', ...requireInternal, async (req, res, next) => {
+  try {
+    const sessions = await DiagnosisSession.findAll({
+      where: { company_id: req.params.companyId, status: 'completed' },
+      include: [
+        { model: DiagnosisResult, as: 'results',
+          attributes: ['stage_no','stage_nm','total_weeks_min','total_weeks_max','created_at'] },
+        { model: AuthUser, as: 'user', attributes: ['name','role_code'] },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+    res.json(sessions.map(s => ({
+      session_id:      s.id,
+      created_at:      s.created_at,
+      selected_modules: s.selected_modules || [],
+      module_cnt:      (s.selected_modules || []).length,
+      user_nm:         s.user?.name,
+      result:          s.results?.[s.results.length - 1] || null,
+    })));
+  } catch (e) { next(e); }
+});
+
+// ── ② 두 세션 결과 비교 ─────────────────────────────────────
+router.get('/compare', ...requireInternal, async (req, res, next) => {
+  try {
+    const { session_a, session_b } = req.query;
+    if (!session_a || !session_b)
+      return res.status(400).json({ error: 'session_a, session_b 필수' });
+
+    const fetchSession = async (id) => {
+      const s = await DiagnosisSession.findOne({
+        where: { id },
+        include: [
+          { model: DiagnosisResult, as: 'results',
+            include: [{ model: DiagnosisResultEffort, as: 'efforts' }] },
+          { model: CustomerCompany, as: 'company', attributes: ['company_nm'] },
+        ],
+      });
+      if (!s) throw new Error(`세션 ${id}를 찾을 수 없습니다`);
+      const r = s.results?.[s.results.length - 1];
+      return {
+        session_id:      s.id,
+        created_at:      s.created_at,
+        company_nm:      s.company?.company_nm,
+        selected_modules: s.selected_modules || [],
+        stage_no:        r?.stage_no,
+        stage_nm:        r?.stage_nm,
+        total_weeks_min: r?.total_weeks_min,
+        total_weeks_max: r?.total_weeks_max,
+        efforts:         r?.efforts || [],
+      };
+    };
+
+    const [a, b] = await Promise.all([fetchSession(session_a), fetchSession(session_b)]);
+
+    // 모듈 추가/제거 비교
+    const setA = new Set(a.selected_modules);
+    const setB = new Set(b.selected_modules);
+    const added   = [...setB].filter(m => !setA.has(m));
+    const removed = [...setA].filter(m => !setB.has(m));
+    const common  = [...setA].filter(m => setB.has(m));
+
+    // 공수 변화
+    const effortA = a.efforts.reduce((s, e) => s + parseFloat(e.effort_weeks || 0), 0);
+    const effortB = b.efforts.reduce((s, e) => s + parseFloat(e.effort_weeks || 0), 0);
+
+    res.json({
+      session_a: a,
+      session_b: b,
+      diff: {
+        modules_added:   added,
+        modules_removed: removed,
+        modules_common:  common,
+        stage_change:    { from: a.stage_no, to: b.stage_no },
+        effort_change:   { from: effortA, to: effortB, delta: effortB - effortA },
+      },
+    });
+  } catch (e) { next(e); }
+});
+
+// ── 판정 룰 시뮬레이터 (연관성 설정 화면용) ─────────────────
+router.post('/simulate', ...requireInternal, async (req, res, next) => {
+  try {
+    const { selected_modules = [], answers = {} } = req.body;
+    const stageNo   = await DiagnosisEngine.calcStage(selected_modules, answers);
+    const stageMeta = DiagnosisEngine.getStageMeta(stageNo);
+    const effort    = await DiagnosisEngine.calcEffort(selected_modules, answers);
+    res.json({
+      stage_no:        stageNo,
+      stage_meta:      stageMeta,
+      total_weeks_min: effort.totalMin,
+      total_weeks_max: effort.totalMax,
+    });
+  } catch (e) { next(e); }
+});

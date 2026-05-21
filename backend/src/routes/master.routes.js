@@ -123,4 +123,42 @@ router.delete('/rules/:id', ...requireManager, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ── judgment-rules 별칭 (프론트엔드 Phase 3 호환) ──────────
+router.get('/judgment-rules',     ...requireInternal, async (req, res, next) => {
+  try { res.json(await MasterJudgmentRule.findAll({ where: { is_active: true }, order: [['priority','DESC']] })); } catch (e) { next(e); }
+});
+router.post('/judgment-rules',    ...requireManager,  async (req, res, next) => {
+  try {
+    const { rule_cd, stage_no, result_stage, priority, condition_json } = req.body;
+    const rule = await MasterJudgmentRule.create({ rule_cd, stage_no, result_stage, priority: priority || 0, condition_json });
+    res.status(201).json(rule);
+  } catch (e) { next(e); }
+});
+router.delete('/judgment-rules/:id', ...requireManager, async (req, res, next) => {
+  try {
+    await MasterJudgmentRule.update({ is_active: false }, { where: { id: req.params.id } });
+    res.json({ message: '삭제 완료' });
+  } catch (e) { next(e); }
+});
+
+// ── ext-system-map (외부 시스템 매핑 CRUD) ─────────────────
+const { RelModuleExternalSystem } = require('../models');
+
+router.get('/ext-system-map', ...requireInternal, async (req, res, next) => {
+  try {
+    const where = { is_active: true };
+    if (req.query.module_cd) where.module_cd = req.query.module_cd;
+    res.json(await RelModuleExternalSystem.findAll({ where }));
+  } catch (e) { next(e); }
+});
+router.post('/ext-system-map', ...requireManager, async (req, res, next) => {
+  try { res.status(201).json(await RelModuleExternalSystem.create(req.body)); } catch (e) { next(e); }
+});
+router.delete('/ext-system-map/:id', ...requireManager, async (req, res, next) => {
+  try {
+    await RelModuleExternalSystem.update({ is_active: false }, { where: { id: req.params.id } });
+    res.json({ message: '삭제 완료' });
+  } catch (e) { next(e); }
+});
+
 module.exports = router;

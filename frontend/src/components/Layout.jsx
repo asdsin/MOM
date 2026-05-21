@@ -3,9 +3,10 @@ import { useAuthStore } from '../store';
 import toast from 'react-hot-toast';
 
 const NAV_ITEMS = [
-  { path: '/',          label: '대시보드',    icon: '📊' },
-  { path: '/customers', label: '고객사 관리', icon: '🏭' },
+  { path: '/',          label: '대시보드',      icon: '📊' },
+  { path: '/customers', label: '고객사 관리',   icon: '🏭' },
   { path: '/master',    label: '기준정보 관리', icon: '⚙️' },
+  { path: '/relation',  label: '연관성 설정',   icon: '🔗' },
 ];
 
 export default function Layout({ children, title }) {
